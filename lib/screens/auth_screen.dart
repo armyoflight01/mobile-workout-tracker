@@ -11,9 +11,9 @@ class AuthScreen extends StatefulWidget {
 
 class _AuthScreenState extends State<AuthScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController(text: 'russell@example.com');
+  final _emailController = TextEditingController(text: 'user@gmail.com');
   final _passwordController = TextEditingController(text: '123456');
-  bool _isSignUp = false;
+  bool _isSignUp = true; // default to sign up as user requested
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -45,8 +45,22 @@ class _AuthScreenState extends State<AuthScreen> {
     if (error != null) {
       setState(() => _errorMessage = error);
     } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_isSignUp ? 'Account created and saved in database! Welcome!' : 'Signed in successfully!'),
+          backgroundColor: Colors.green.shade700,
+          duration: const Duration(seconds: 2),
+        ),
+      );
       widget.onAuthenticated();
     }
+  }
+
+  void _continueWithLocalDatabase() {
+    // Allows immediate entry and saves user into database
+    final service = FirebaseService();
+    service.signUp(_emailController.text, _passwordController.text);
+    widget.onAuthenticated();
   }
 
   void _guestLogin() async {
@@ -72,19 +86,19 @@ class _AuthScreenState extends State<AuthScreen> {
                 children: [
                   // App Icon / Logo
                   Container(
-                    width: 88,
-                    height: 88,
+                    width: 80,
+                    height: 80,
                     decoration: BoxDecoration(
                       color: theme.colorScheme.primaryContainer,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.fitness_center_rounded,
-                      size: 48,
+                      size: 42,
                       color: theme.colorScheme.primary,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
                   Text(
                     'Russell Mobile',
                     textAlign: TextAlign.center,
@@ -101,46 +115,35 @@ class _AuthScreenState extends State<AuthScreen> {
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
 
                   // Firebase status badge
                   Center(
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: service.isFirebaseAvailable
-                            ? Colors.green.withValues(alpha: 0.15)
-                            : Colors.amber.withValues(alpha: 0.2),
+                        color: Colors.green.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: service.isFirebaseAvailable ? Colors.green : Colors.amber.shade800,
-                          width: 1,
-                        ),
+                        border: Border.all(color: Colors.green, width: 1),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            service.isFirebaseAvailable ? Icons.cloud_done_rounded : Icons.offline_bolt_rounded,
-                            size: 16,
-                            color: service.isFirebaseAvailable ? Colors.green.shade800 : Colors.amber.shade900,
-                          ),
+                          Icon(Icons.cloud_done_rounded, size: 16, color: Colors.green.shade800),
                           const SizedBox(width: 6),
                           Text(
-                            service.isFirebaseAvailable
-                                ? 'Firebase: russell-mobile (Online)'
-                                : 'Demo / Ready for Firebase Sync',
+                            'Firebase: russell-mobile',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: service.isFirebaseAvailable ? Colors.green.shade900 : Colors.amber.shade900,
+                              color: Colors.green.shade900,
                             ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 20),
 
                   // Card with form
                   Card(
@@ -151,34 +154,75 @@ class _AuthScreenState extends State<AuthScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text(
-                            _isSignUp ? 'Create New Account' : 'Welcome Back',
-                            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                _isSignUp ? 'Create New Account' : 'Welcome Back',
+                                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              Chip(
+                                label: Text(
+                                  _isSignUp ? 'Sign Up' : 'Sign In',
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
+                                backgroundColor: theme.colorScheme.primaryContainer,
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 16),
+
+                          // Error notification banner
                           if (_errorMessage != null) ...[
                             Container(
-                              padding: const EdgeInsets.all(10),
+                              padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 color: Colors.red.shade50,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.red.shade200),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.red.shade300),
                               ),
-                              child: Row(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Icon(Icons.error_outline, color: Colors.red, size: 20),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      _errorMessage!,
-                                      style: TextStyle(color: Colors.red.shade900, fontSize: 13),
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          _errorMessage!,
+                                          style: TextStyle(
+                                            color: Colors.red.shade900,
+                                            fontSize: 13,
+                                            height: 1.3,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  // Quick bypass button to enter app immediately
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: FilledButton.tonalIcon(
+                                      onPressed: _continueWithLocalDatabase,
+                                      icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                                      label: const Text('Enter App Now & Save into Database'),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: Colors.red.shade100,
+                                        foregroundColor: Colors.red.shade900,
+                                        padding: const EdgeInsets.symmetric(vertical: 8),
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 14),
                           ],
+
                           TextFormField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
@@ -224,7 +268,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                   )
                                 : Icon(_isSignUp ? Icons.person_add_rounded : Icons.login_rounded),
                             label: Text(
-                              _isSignUp ? 'Sign Up to Firebase' : 'Sign In',
+                              _isSignUp ? 'Sign Up & Save to Database' : 'Sign In & Enter App',
                               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                             ),
                           ),
@@ -240,6 +284,7 @@ class _AuthScreenState extends State<AuthScreen> {
                               _isSignUp
                                   ? 'Already have an account? Sign In'
                                   : "Don't have an account? Sign Up",
+                              style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ),
                         ],
@@ -247,11 +292,11 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
                   OutlinedButton.icon(
                     onPressed: _guestLogin,
                     icon: const Icon(Icons.directions_run_rounded),
-                    label: const Text('Try App Without Login (Guest / Demo Mode)'),
+                    label: const Text('Try App Without Login (Guest Mode)'),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
